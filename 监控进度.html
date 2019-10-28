@@ -1,0 +1,178 @@
+<!DOCTYPE html> 
+<html> 
+<head> 
+<meta charset=" utf-8"> 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>圆环进度</title>
+<style>
+  body{
+    padding: 0;
+    margin: 0;
+  }
+  .content{
+    width: 300px;
+    height: 100%; 
+    position: relative;
+    text-align: center;
+  }
+  .procanvas{
+    position: absolute;
+    left: 20%;
+    top: 15%;
+    z-index: 100;
+  }
+  img{
+    width: 190px;
+    position: absolute;
+    left: 78px;
+    top: 17px;
+    z-index: 111;
+  }
+</style>
+</head>
+<body>
+  <div class="content">
+    <img src="./clock-background.png">
+    <canvas id="myCanvas" class="procanvas" value="100%"></canvas>
+  </div>
+</body>
+<script src="./1.js"></script>
+<script src="./2.js"></script>
+<script type="text/javascript">
+
+  //默认从0度开始，0度对一个的时间是3点整，0-2 是一个整圆，那么可以将其看为等分12份，其中按小时每小时约为0.167度。然后再除以3600，计算得出每秒约为0.0000464度；
+  //其中12点之前，因为从3点开始所以，小时要减3;12点之后的1，2，3 对应的小时分别为 10,11,12;
+  var time = new Date();
+  let hour = 10 || time.getHours();
+  let minutes = 34 || time.getMinutes();
+  let second = 33 || time.getSeconds();
+  if(hour == "12" || hour =="0" || hour == "00"){
+    hour = (9*1+(minutes/60)*1+second/3600).toFixed(6);
+  }else if(hour>12){
+    let l = hour-12;//13,14,15
+    if(l=="1"){
+      hour = (10*1+(minutes/60)*1+second/3600).toFixed(6);
+    }else if(l=="2"){
+      hour = (11*1+(minutes/60)*1+second/3600).toFixed(6);
+    }else if(l=="3"){
+      hour = (12*1+(minutes/60)*1+second/3600).toFixed(6);
+    }else{
+      hour = ((hour-12-3)*1+(minutes/60)*1+second/3600).toFixed(6);
+    }
+  }else{
+    if(hour>3){
+      hour = ((hour-3)*1+(minutes/60)*1+second/3600).toFixed(6);
+    }else{
+      if(hour=="1"){
+        hour=10;
+      }else if(hour=="2"){
+        hour=11;
+      }else if(hour=="3"){
+        hour=12
+      }
+      hour=(hour*1+(minutes/60)*1+second/3600).toFixed(6);
+    }
+  }
+  console.log(hour);
+  let stylewidth=225;
+  let styleheight=225;
+  var canvas = document.getElementById("myCanvas");
+  var context = canvas.getContext('2d');
+  var scale = 2;
+  var center = [stylewidth/2*scale,styleheight/2*scale];
+  canvas.style.width = stylewidth + "px";
+  canvas.style.height = styleheight + "px";
+  canvas.width = stylewidth*scale;
+  canvas.height = styleheight*scale;
+
+ 
+  var miao = 0.0000464; //每秒的度数，0.0000464；
+  var xiaoshi = 0.167;  //每小时的度数
+  var center = [225,225];//
+
+
+  //原始圆形
+  context.beginPath();
+  context.moveTo(center[0], center[1]);
+  context.arc(center[0], center[1], center[0], 0*Math.PI*2, Math.PI*2, false);//设置圆弧的起始与终止点
+  context.closePath();
+  //创建渐变对象  渐变开始点和渐变结束点
+  var g = context.createLinearGradient(0,0,180,0);  
+  g.addColorStop(0, '#c4c4c4'); //添加颜色点
+  g.addColorStop(1, '#c1c3c6'); //添加颜色点
+  context.fillStyle = g;     
+  context.fill();
+
+
+  //--------------------------------------------------函数逻辑开始--------------------------------------------------
+  function stageTime(begin,end){
+    // console.log(begin.length);
+    let shi,fen,miao=0;
+    shi = begin.substr(0,2)*1;
+    fen = begin.substr(3,2)*1;
+    miao = begin.substr(6,2)*1;
+    let b =shi*3600+fen*60+miao;
+    shi = end.substr(0,2)*1;
+    fen = end.substr(3,2)*1;
+    miao = end.substr(6,2)*1;
+    let e = shi*3600+fen*60+miao;
+    console.log("历经",e-b);
+    return e-b;
+  }
+  let timeList = oldData;
+  let color=['red','green','blue'];
+  let i=0;
+  let n=xiaoshi*hour; //n为开始的度数；
+
+
+  for(let s=0;s<oldData.length;s++){
+    draw(i,n,stageTime(oldData[s].time[0],oldData[s].time[1])); //i 为颜色下标，n为开始的度数，第三个为持续的秒数;
+    i+=1;
+    if(i==color.length){
+      i=0;
+    };
+    n+=miao*stageTime(oldData[s].time[0],oldData[s].time[1]);  //每画完一次就把n，以秒进行度数累加;
+    console.log(n);
+  }
+
+
+  //重置覆盖函数
+  setTimeout(() => {
+    n = xiaoshi*hour;//重置时间
+    i=0;
+    let newTimeList = newData;  
+    // console.log("合并后"+newTimeList);
+    for(let s=0;s<newTimeList.length;s++){
+      draw(i,n,stageTime(newTimeList[s].time[0],newTimeList[s].time[1]));
+      i+=1;
+      if(i==color.length){
+        i=0;
+      };
+      n+=miao*stageTime(newTimeList[s].time[0],newTimeList[s].time[1]);  //每画完一次就按秒进行累加;累加度数;
+    }
+  }, 2000);
+
+
+  //执行绘图函数
+  function draw(i,n,stage){
+    // console.log(i,n,stage);
+    context.beginPath();
+    context.moveTo(center[0], center[1]);
+    context.arc(center[0], center[1], center[0], Math.PI*n,Math.PI*(n+miao*stage), false);//设置圆弧的起始与终止点
+    // console.log(i+"*************"+Math.PI*n,Math.PI*(n+miao*stage)+"************"+stage);
+    context.closePath();
+    context.fillStyle = color[i];
+    context.fill();
+  }
+
+
+  // 画内部空白
+  context.beginPath();
+  context.moveTo(center[0], center[1]);
+  context.arc(center[0], center[1], scale*60, 0, Math.PI * 2, false);
+  context.closePath();
+  context.fillStyle = 'rgba(255,255,255,1)';
+  context.fill();
+
+</script>
+</html>
